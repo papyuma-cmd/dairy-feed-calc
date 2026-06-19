@@ -95,7 +95,7 @@
         <div class="calcfield"><span id="o_dmi">—</span><span class="u">kg / 頭・日</span></div></div>
       <div><label>給与回数 / 日</label><input id="i_feed" type="number" value="2" min="1"></div>
     </div>
-    <div class="note">DMI＝全原料の「乾物量(1頭/日)」の合計（手入力ではなく自動計算）。</div>
+    <div class="note">DMI＝全原料の「乾物量(1頭/日)」の合計（手入力ではなく自動計算）。給与回数を基に「1回量」⇔「総量/日」を換算します。</div>
   </div>
 
   <div class="card">
@@ -129,11 +129,11 @@
     <table id="calc">
       <thead><tr>
         <th class="name">原料</th>
-        <th>%DM<br><small class="lbl">編集可</small></th>
-        <th>総量/日<br><small class="lbl">kg・編集可</small></th>
-        <th>1回(全体)<br><small class="lbl">kg・編集可</small></th>
-        <th>1頭/日<br><small class="lbl">現物kg</small></th>
-        <th>1頭/回<br><small class="lbl">現物kg</small></th>
+        <th>%DM<br><small class="lbl">編集→Enter</small></th>
+        <th>総量/日<br><small class="lbl">kg・編集→Enter</small></th>
+        <th>1回(全体)<br><small class="lbl">kg・編集→Enter</small></th>
+        <th>1頭/日<br><small class="lbl">現物kg・編集→Enter</small></th>
+        <th>1頭/回<br><small class="lbl">現物kg・編集→Enter</small></th>
         <th>乾物 1頭/日<br><small class="lbl">kg</small></th>
       </tr></thead>
       <tbody></tbody>
@@ -144,7 +144,7 @@
       </tr></tfoot>
     </table>
     </div>
-    <div class="note">「%DM」「総量/日」「1回(全体)」はタップで編集できます。<b>サイレージは「1回(全体)」を変える</b>と、設定頭数で割った1頭あたり量がその場で出ます。🔒固定＝総量固定／🎛変動＝栄養で量調整。</div>
+    <div class="note"><b>総量/日・1回(全体)・1頭/日・1頭/回</b>のどれでも入力でき、<b>Enter（または欄から離れる）</b>で他の項目が再計算されます。例：1回(全体)を入れると 総量/日＝1回×給与回数。入力中は計算は走りません。🔒固定＝総量固定／🎛変動＝栄養で量調整。</div>
   </div>
 
   <div class="card">
@@ -209,7 +209,7 @@ function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(!s)return;
   if(s.now)now=s.now; if(s.base)base=s.base;
   if(s.group!=null)sv('i_group',s.group); if(s.date!=null)sv('i_date',s.date);
   if(s.feed!=null)sv('i_feed',s.feed);
-  document.querySelector('.sample').style.display='none'; // 保存済みデータがあればサンプル注記を消す
+  const sm=document.querySelector('.sample'); if(sm) sm.style.display='none';
 }catch(e){}}
 
 function loadHist(){try{return JSON.parse(localStorage.getItem(HKEY))||[]}catch(e){return[]}}
@@ -263,37 +263,32 @@ function setHead(which,v){v=Math.max(1,v);if(which==='now'){now=v;document.getEl
   else{base=v;document.getElementById('baseLabel').textContent=base;}save();render();}
 function bump(which,d){setHead(which,(which==='now'?now:base)+d);}
 
-function onInput(i,col,el){
-  const v=parseFloat(el.textContent.replace(/[%,\s]/g,''));
-  if(isNaN(v)) return;
-  const fd=feed(), x=ITEMS[i];
+// 編集はEnter／フォーカスアウトで確定（入力中は再計算しない）
+function cellKey(e,el){ if(e.key==='Enter'){ e.preventDefault(); el.blur(); } }
+function commitCell(el){
+  const i=+el.dataset.i, col=el.dataset.col, fd=feed(), x=ITEMS[i];
+  const v=parseFloat((el.textContent||'').replace(/[^\d.\-]/g,''));
+  if(isNaN(v)){ render(); return; }   // 不正入力は元に戻す
   if(col==='dm') x.dm=v;
   else if(col==='total') x.total=v;
-  else if(col==='feed') x.total=v*fd;
-  const tr=el.closest('tr'), c=tr.children, perHeadDay=x.total/now;
-  if(col!=='total') c[2].textContent=num(Math.round(x.total*1000)/1000);
-  if(col!=='feed')  c[3].textContent=kg(x.total/fd);
-  c[4].innerHTML=kg(perHeadDay)+' <small class="lbl">kg</small>';
-  c[5].innerHTML=kg(perHeadDay/fd)+' <small class="lbl">kg</small>';
-  c[6].textContent=kg(perHeadDay*x.dm/100);
-  let td=0,ds=0; ITEMS.forEach(it=>{td+=it.total; ds+=(it.total/now)*it.dm/100;});
-  document.getElementById('o_dmi').textContent=num(Math.round(ds*10)/10);
-  document.getElementById('o_dmi2').textContent=num(Math.round(ds*100)/100);
-  document.getElementById('o_totalday').textContent=num(Math.round(td*10)/10)+' kg';
-  document.getElementById('o_totalfeed').textContent=num(Math.round(td/fd*10)/10)+' kg';
-  save();
+  else if(col==='feed')  x.total=v*fd;      // 1回(全体) → 総量/日 = 1回 × 給与回数
+  else if(col==='phday') x.total=v*now;     // 1頭/日 → 総量 = 1頭量 × 頭数
+  else if(col==='phfeed')x.total=v*now*fd;  // 1頭/回 → 総量 = 1頭1回量 × 頭数 × 回数
+  save(); render();
 }
+
 function rowHtml(x,i,fd){
   const perHeadDay=x.total/now, perHeadFeed=perHeadDay/fd, perFeedAll=x.total/fd;
   const dmPerHead=perHeadDay*x.dm/100;
+  const E=(col,val,cls)=>`<td class="edit ${cls||''}" contenteditable data-i="${i}" data-col="${col}" onkeydown="cellKey(event,this)" onblur="commitCell(this)">${val}</td>`;
   return {dmPerHead, total:x.total, html:
     `<tr class="${x.fixed?'f-row':'v-row'}">
       <td class="name">${x.jp}</td>
-      <td class="edit" contenteditable oninput="onInput(${i},'dm',this)">${num(x.dm)}</td>
-      <td class="edit" contenteditable oninput="onInput(${i},'total',this)">${num(x.total)}</td>
-      <td class="edit" contenteditable oninput="onInput(${i},'feed',this)">${kg(perFeedAll)}</td>
-      <td class="perhead">${kg(perHeadDay)} <small class="lbl">kg</small></td>
-      <td>${kg(perHeadFeed)} <small class="lbl">kg</small></td>
+      ${E('dm',num(x.dm))}
+      ${E('total',num(Math.round(x.total*1000)/1000))}
+      ${E('feed',kg(perFeedAll))}
+      ${E('phday',kg(perHeadDay),'perhead')}
+      ${E('phfeed',kg(perHeadFeed))}
       <td>${kg(dmPerHead)}</td>
     </tr>`};
 }
