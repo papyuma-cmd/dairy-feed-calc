@@ -13,7 +13,7 @@
         --accent:#c0392b;--accent2:#2d6cdf;--hi:#fff7e6;--fix:#2d6cdf;--var:#1a7a4c}
   *{box-sizing:border-box}
   body{margin:0;font-family:-apple-system,"Hiragino Sans","Yu Gothic",sans-serif;
-       background:var(--bg);color:var(--ink);font-size:15px;line-height:1.4}
+       background:var(--bg);color:var(--ink);font-size:15px;line-height:1.4;-webkit-text-size-adjust:100%}
   header{background:#1b2733;color:#fff;padding:12px 16px}
   header h1{margin:0;font-size:16px;font-weight:700}
   .wrap{max-width:860px;margin:0 auto;padding:12px}
@@ -37,17 +37,16 @@
   .heads .big{font-size:32px;font-weight:800;color:var(--accent);min-width:70px;text-align:center}
   .stepbtn{font-size:22px;width:46px;height:46px;border:1px solid var(--line);background:#fff;border-radius:9px;cursor:pointer}
   .stepbtn:active{background:#eef2f6}
-  /* 原料テーブル（1原料＝1行） */
   .rt{width:100%;border-collapse:collapse;table-layout:fixed}
   .rt col.cn{width:24%} .rt col.cq{width:19%}
   .rt th{background:#eef2f6;color:var(--muted);font-size:10.5px;font-weight:600;padding:5px 2px;text-align:right;border-bottom:1px solid var(--line)}
   .rt th:first-child{text-align:left;padding-left:8px}
-  .rt td{padding:7px 3px;text-align:right;border-bottom:1px solid #eef1f4;font-size:14px;font-weight:700}
+  .rt td{padding:9px 3px;text-align:right;border-bottom:1px solid #eef1f4;font-size:14px;font-weight:700}
   .rt td.nm{text-align:left;font-size:12px;font-weight:700;line-height:1.12;
             border-left:4px solid var(--var);padding-left:7px;word-break:break-all}
   .rt tr.fix td.nm{border-left-color:var(--fix)}
-  .rt td.ed{color:var(--ink)}
-  .rt td.ed:focus{outline:none;background:#fffced;box-shadow:inset 0 0 0 2px var(--accent2)}
+  .rt td.ed{color:var(--accent2);cursor:pointer;position:relative}
+  .rt td.ed:active{background:#eef4ff}
   .rt td.ph{color:var(--accent)}
   .rt td.ro{color:#555;font-weight:600}
   .sum{display:flex;justify-content:space-between;gap:8px;background:#1b2733;color:#fff;
@@ -57,6 +56,25 @@
   #histList table{width:100%;border-collapse:collapse;font-size:12px}
   #histList td,#histList th{border:1px solid var(--line);padding:4px 6px;text-align:left}
   details summary{cursor:pointer;font-size:13px;color:var(--accent2);font-weight:700}
+  /* 数値テンキー */
+  .padwrap{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:50}
+  .padwrap.on{display:flex}
+  .padbox{background:#fff;width:100%;max-width:430px;border-radius:18px 18px 0 0;padding:14px 14px calc(14px + env(safe-area-inset-bottom))}
+  @media(min-width:480px){.padwrap{align-items:center}.padbox{border-radius:18px}}
+  .padhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .padhead .t{font-weight:700;color:var(--accent2);font-size:14px}
+  .padhead .x{border:none;background:none;font-size:22px;cursor:pointer;color:var(--muted)}
+  .paddisp{font-size:36px;font-weight:800;text-align:right;padding:10px 16px;background:#f4f6f8;
+           border-radius:12px;margin-bottom:10px;min-height:60px;word-break:break-all}
+  .paddisp .u{font-size:16px;color:var(--muted);margin-left:6px}
+  .padgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .padgrid button{font-size:25px;font-weight:700;padding:17px 0;border:1px solid var(--line);background:#fff;border-radius:13px;cursor:pointer}
+  .padgrid button:active{background:#eef2f6}
+  .padgrid button.bk{color:var(--accent)}
+  .padfoot{display:grid;grid-template-columns:1fr 1.4fr;gap:8px;margin-top:8px}
+  .padfoot button{font-size:18px;font-weight:800;padding:15px 0;border-radius:13px;cursor:pointer}
+  .padfoot .clr{background:#fff;border:1px solid var(--line)}
+  .padfoot .ok{background:var(--accent2);color:#fff;border:none}
 </style>
 </head>
 <body>
@@ -106,7 +124,7 @@
       <span>1回 <span id="o_totalfeed">—</span></span>
       <span>乾物(DMI) <span id="o_dmi2">—</span> kg</span>
     </div>
-    <div class="note">総量・1回・1頭/日の数字をタップ→入力→Enter（または別の場所をタップ）で再計算。1回を入れると 総量＝1回×給与回数。</div>
+    <div class="note">総量・1回・1頭/日の数字をタップ → テンキーで入力 → 決定。1回を入れると 総量＝1回×給与回数。</div>
   </div>
 
   <div class="card">
@@ -117,6 +135,24 @@
     </details>
   </div>
 
+</div>
+
+<!-- 数値テンキー ポップアップ -->
+<div class="padwrap" id="pad" onclick="if(event.target===this)closePad()">
+  <div class="padbox">
+    <div class="padhead"><span class="t" id="padTitle"></span><button class="x" onclick="closePad()">✕</button></div>
+    <div class="paddisp"><span id="padDisp">0</span><span class="u">kg</span></div>
+    <div class="padgrid">
+      <button onclick="padKey('7')">7</button><button onclick="padKey('8')">8</button><button onclick="padKey('9')">9</button>
+      <button onclick="padKey('4')">4</button><button onclick="padKey('5')">5</button><button onclick="padKey('6')">6</button>
+      <button onclick="padKey('1')">1</button><button onclick="padKey('2')">2</button><button onclick="padKey('3')">3</button>
+      <button onclick="padKey('.')">.</button><button onclick="padKey('0')">0</button><button class="bk" onclick="padKey('bk')">⌫</button>
+    </div>
+    <div class="padfoot">
+      <button class="clr" onclick="padClear()">クリア</button>
+      <button class="ok" onclick="padOK()">決定</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -139,10 +175,10 @@ const DEFAULTS={group:"搾乳群",date:"",feed:"2",now:120};
 let ITEMS = DESIGN.map(x=>({...x}));
 let now=120;
 
-// 表示名（長い原料は改行／プレミックスは「ミックス」）
 const DISP={'圧ペンコーン':'圧ペン<br>コーン','マッシュコーン':'マッシュ<br>コーン',
   '1番サイレージ':'1番<br>サイレージ','2番サイレージ':'2番<br>サイレージ','プレミックス':'ミックス'};
 function dispName(jp){return DISP[jp]||jp;}
+const COLLAB={total:'総量/日',feed:'1回量',phday:'1頭/日'};
 
 const NDS_MAP = [
   ["Nakanome Lactation Mix Omnigen","プレミックス",true],
@@ -213,11 +249,8 @@ const num=n=>n.toLocaleString('ja-JP');
 const kg=n=>num(Math.round(n*1000)/1000);
 function bump(d){now=Math.max(1,now+d);document.getElementById('nowLabel').textContent=now;save();render();}
 
-function cellKey(e,el){ if(e.key==='Enter'){ e.preventDefault(); el.blur(); } }
-function commitCell(el){
-  const i=+el.dataset.i, col=el.dataset.col, fd=feed(), x=ITEMS[i];
-  const v=parseFloat((el.textContent||'').replace(/[^\d.\-]/g,''));
-  if(isNaN(v)){ render(); return; }
+function commitValue(i,col,v){
+  const fd=feed(), x=ITEMS[i];
   if(col==='total') x.total=v;
   else if(col==='feed')  x.total=v*fd;
   else if(col==='phday') x.total=v*now;
@@ -230,7 +263,7 @@ function render(){
   ITEMS.forEach((x,i)=>{
     const phd=x.total/now, pfa=x.total/fd, dmh=phd*x.dm/100;
     totalDay+=x.total; dmSum+=dmh;
-    const E=(col,val,cls)=>`<td class="ed ${cls||''}" contenteditable data-i="${i}" data-col="${col}" onkeydown="cellKey(event,this)" onblur="commitCell(this)">${val}</td>`;
+    const E=(col,val,cls)=>`<td class="ed ${cls||''}" data-i="${i}" data-col="${col}" onclick="openPad(this)">${val}</td>`;
     html+=`<tr class="${x.fixed?'fix':''}">
       <td class="nm">${dispName(x.jp)}</td>
       ${E('total',num(Math.round(x.total*1000)/1000))}
@@ -244,6 +277,40 @@ function render(){
   document.getElementById('o_totalday').textContent=num(Math.round(totalDay*10)/10)+' kg';
   document.getElementById('o_totalfeed').textContent=num(Math.round(totalDay/fd*10)/10)+' kg';
 }
+
+// ===== 数値テンキー =====
+let padCtx=null, padReplace=true;
+function openPad(td){
+  padCtx={i:+td.dataset.i, col:td.dataset.col};
+  const cur=(td.textContent||'').replace(/[^\d.]/g,'')||'0';
+  document.getElementById('padDisp').textContent=cur;   // 現在値を表示
+  padReplace=true;                                       // 最初のキーで上書き
+  document.getElementById('padTitle').textContent=`${ITEMS[padCtx.i].jp} ／ ${COLLAB[padCtx.col]}`;
+  document.getElementById('pad').classList.add('on');
+}
+function closePad(){document.getElementById('pad').classList.remove('on');padCtx=null;}
+function padKey(k){
+  const el=document.getElementById('padDisp'); let s=el.textContent;
+  if(k==='bk'){ s=s.slice(0,-1); if(s===''||s==='-')s='0'; padReplace=false; }
+  else if(k==='.'){ if(padReplace){s='0.';padReplace=false;} else if(!s.includes('.')) s=s+'.'; }
+  else { if(padReplace){ s=k; padReplace=false; } else { s=(s==='0'?k:s+k); } }
+  el.textContent=s;
+}
+function padClear(){document.getElementById('padDisp').textContent='0';padReplace=false;}
+function padOK(){
+  if(padCtx){ const v=parseFloat(document.getElementById('padDisp').textContent);
+    if(!isNaN(v)) commitValue(padCtx.i,padCtx.col,v); }
+  closePad();
+}
+// PCの物理キーボードでも操作可
+document.addEventListener('keydown',e=>{
+  if(!document.getElementById('pad').classList.contains('on'))return;
+  if(/^[0-9]$/.test(e.key)){padKey(e.key);e.preventDefault();}
+  else if(e.key==='.'){padKey('.');e.preventDefault();}
+  else if(e.key==='Backspace'){padKey('bk');e.preventDefault();}
+  else if(e.key==='Enter'){padOK();e.preventDefault();}
+  else if(e.key==='Escape'){closePad();e.preventDefault();}
+});
 
 // ===== 読み込み（PDF / 画像OCR / ドロップ） =====
 function setStatus(msg,cls){const e=document.getElementById('loadStatus');e.textContent=msg;e.className='status'+(cls?' '+cls:'');}
@@ -316,7 +383,6 @@ document.getElementById('imgInput').addEventListener('change', async e=>{
     setStatus(`✓ 画像読込：${d.date||'設計日不明'} ／ ${d.head}頭 ／ ${d.items.length}原料`,'ok');
   }catch(err){ setStatus('✗ 画像からは読み取りにくいです（'+err.message+'）。明るく正面から再撮影するか、PDF読込を推奨します。','err'); }
 });
-// ドラッグ&ドロップ（PCでPDF/画像）
 window.addEventListener('dragover',e=>{e.preventDefault();document.body.classList.add('drag');});
 window.addEventListener('dragleave',e=>{if(e.relatedTarget===null)document.body.classList.remove('drag');});
 window.addEventListener('drop', async e=>{
