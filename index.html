@@ -13,12 +13,11 @@
         --accent:#c0392b;--accent2:#2d6cdf;--hi:#fff7e6;--fix:#2d6cdf;--var:#1a7a4c}
   *{box-sizing:border-box}
   body{margin:0;font-family:-apple-system,"Hiragino Sans","Yu Gothic",sans-serif;
-       background:var(--bg);color:var(--ink);font-size:15px;line-height:1.45}
+       background:var(--bg);color:var(--ink);font-size:15px;line-height:1.4}
   header{background:#1b2733;color:#fff;padding:12px 16px}
   header h1{margin:0;font-size:16px;font-weight:700}
   .wrap{max-width:860px;margin:0 auto;padding:12px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:12px}
-  /* 読み込みボタン */
   .loadrow{display:flex;gap:8px;flex-wrap:wrap}
   .bigbtn{flex:1 1 150px;font-size:15px;font-weight:700;padding:13px 14px;border:none;border-radius:10px;
           background:var(--accent2);color:#fff;cursor:pointer}
@@ -26,37 +25,34 @@
   .bigbtn:active{opacity:.85}
   .status{font-size:12.5px;color:var(--muted);margin-top:8px;min-height:1em}
   .status.ok{color:var(--var);font-weight:700} .status.err{color:var(--accent);font-weight:700}
-  /* 基本情報：ラベルと入力を同じ行に */
+  .drophint{font-size:11px;color:var(--muted);margin-top:6px}
+  body.drag .card:first-child{outline:2px dashed var(--accent2);outline-offset:2px}
   .info{display:flex;flex-wrap:wrap;gap:8px}
   .f{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:8px;padding:6px 10px;flex:1 1 150px;background:#fff}
   .f label{font-size:12px;color:var(--muted);white-space:nowrap}
   .f input{border:none;outline:none;font-size:15px;width:100%;min-width:50px;background:transparent}
   .f .dmi{font-weight:800;color:#9a6b00;white-space:nowrap}
-  /* 頭数 */
   .heads{display:flex;align-items:center;gap:10px}
   .heads .lab{font-size:12px;color:var(--muted)}
   .heads .big{font-size:32px;font-weight:800;color:var(--accent);min-width:70px;text-align:center}
   .stepbtn{font-size:22px;width:46px;height:46px;border:1px solid var(--line);background:#fff;border-radius:9px;cursor:pointer}
   .stepbtn:active{background:#eef2f6}
-  /* 原料カード */
-  .ing{border:1px solid var(--line);border-left:5px solid var(--var);border-radius:9px;
-       padding:7px 10px;margin-bottom:6px;background:#fff}
-  .ing.fix{border-left-color:var(--fix)}
-  .ing .top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
-  .ing .nm{font-weight:700;font-size:15px}
-  .ing .dm{font-size:12px;color:var(--muted);white-space:nowrap}
-  .ing .qrow{display:flex;flex-wrap:wrap;gap:2px 16px;margin-top:3px;font-size:13px;color:#333}
-  .ing .kv{white-space:nowrap}
-  .ing .kv .k{color:var(--muted)}
-  .val{display:inline-block;min-width:30px;padding:0 3px;border-bottom:1px dashed #b9c4d0;
-       font-weight:700;text-align:right;color:var(--ink)}
-  .val:focus{outline:none;border-bottom:2px solid var(--accent2);background:#fffef0}
-  .val.ph{color:var(--accent)}
-  .ro{font-weight:700}
-  .sum{display:flex;justify-content:space-between;gap:10px;background:#1b2733;color:#fff;
-       border-radius:9px;padding:9px 12px;margin-top:4px;font-size:13px;font-weight:700;flex-wrap:wrap}
+  /* 原料テーブル（1原料＝1行） */
+  .rt{width:100%;border-collapse:collapse;table-layout:fixed}
+  .rt col.cn{width:24%} .rt col.cq{width:19%}
+  .rt th{background:#eef2f6;color:var(--muted);font-size:10.5px;font-weight:600;padding:5px 2px;text-align:right;border-bottom:1px solid var(--line)}
+  .rt th:first-child{text-align:left;padding-left:8px}
+  .rt td{padding:7px 3px;text-align:right;border-bottom:1px solid #eef1f4;font-size:14px;font-weight:700}
+  .rt td.nm{text-align:left;font-size:12px;font-weight:700;line-height:1.12;
+            border-left:4px solid var(--var);padding-left:7px;word-break:break-all}
+  .rt tr.fix td.nm{border-left-color:var(--fix)}
+  .rt td.ed{color:var(--ink)}
+  .rt td.ed:focus{outline:none;background:#fffced;box-shadow:inset 0 0 0 2px var(--accent2)}
+  .rt td.ph{color:var(--accent)}
+  .rt td.ro{color:#555;font-weight:600}
+  .sum{display:flex;justify-content:space-between;gap:8px;background:#1b2733;color:#fff;
+       border-radius:9px;padding:9px 12px;margin-top:8px;font-size:12.5px;font-weight:700;flex-wrap:wrap}
   .minibtn{font-size:12px;padding:4px 11px;border:1px solid var(--line);background:#fff;border-radius:7px;cursor:pointer}
-  h2{margin:0 0 9px;font-size:13px;color:var(--accent2)}
   .note{font-size:11.5px;color:var(--muted);margin-top:8px}
   #histList table{width:100%;border-collapse:collapse;font-size:12px}
   #histList td,#histList th{border:1px solid var(--line);padding:4px 6px;text-align:left}
@@ -74,8 +70,9 @@
       <button class="bigbtn img" onclick="document.getElementById('imgInput').click()">🖼 画像読み込み</button>
     </div>
     <input type="file" id="pdfInput" accept="application/pdf,.pdf" style="display:none">
-    <input type="file" id="imgInput" accept="image/*" capture="environment" style="display:none">
+    <input type="file" id="imgInput" accept="image/*" style="display:none">
     <div class="status" id="loadStatus"></div>
+    <div class="drophint">※ PC は PDF をここにドラッグ&ドロップでも読み込めます。画像ボタンは「写真ライブラリ／ファイル」から選べます。</div>
   </div>
 
   <div class="card">
@@ -97,13 +94,19 @@
   </div>
 
   <div class="card">
-    <div id="ingList"></div>
+    <table class="rt">
+      <colgroup><col class="cn"><col class="cq"><col class="cq"><col class="cq"><col class="cq"></colgroup>
+      <thead><tr>
+        <th>原料</th><th>総量/日<br>kg</th><th>1回<br>kg</th><th>1頭/日<br>kg</th><th>乾物<br>kg</th>
+      </tr></thead>
+      <tbody id="ingBody"></tbody>
+    </table>
     <div class="sum">
       <span>合計/日 <span id="o_totalday">—</span></span>
       <span>1回 <span id="o_totalfeed">—</span></span>
       <span>乾物(DMI) <span id="o_dmi2">—</span> kg</span>
     </div>
-    <div class="note">数字をタップ → 入力 → Enter（または別の場所をタップ）で再計算。1回量を入れると 総量＝1回×給与回数。</div>
+    <div class="note">総量・1回・1頭/日の数字をタップ→入力→Enter（または別の場所をタップ）で再計算。1回を入れると 総量＝1回×給与回数。</div>
   </div>
 
   <div class="card">
@@ -135,6 +138,11 @@ const DESIGN = [
 const DEFAULTS={group:"搾乳群",date:"",feed:"2",now:120};
 let ITEMS = DESIGN.map(x=>({...x}));
 let now=120;
+
+// 表示名（長い原料は改行／プレミックスは「ミックス」）
+const DISP={'圧ペンコーン':'圧ペン<br>コーン','マッシュコーン':'マッシュ<br>コーン',
+  '1番サイレージ':'1番<br>サイレージ','2番サイレージ':'2番<br>サイレージ','プレミックス':'ミックス'};
+function dispName(jp){return DISP[jp]||jp;}
 
 const NDS_MAP = [
   ["Nakanome Lactation Mix Omnigen","プレミックス",true],
@@ -210,42 +218,34 @@ function commitCell(el){
   const i=+el.dataset.i, col=el.dataset.col, fd=feed(), x=ITEMS[i];
   const v=parseFloat((el.textContent||'').replace(/[^\d.\-]/g,''));
   if(isNaN(v)){ render(); return; }
-  if(col==='dm') x.dm=v;
-  else if(col==='total') x.total=v;
+  if(col==='total') x.total=v;
   else if(col==='feed')  x.total=v*fd;
   else if(col==='phday') x.total=v*now;
-  else if(col==='phfeed')x.total=v*now*fd;
   save(); render();
 }
-function V(i,col,val,cls){return `<span class="val ${cls||''}" contenteditable data-i="${i}" data-col="${col}" onkeydown="cellKey(event,this)" onblur="commitCell(this)">${val}</span>`;}
 
 function render(){
   const fd=feed();
   let totalDay=0,dmSum=0,html='';
   ITEMS.forEach((x,i)=>{
-    const phd=x.total/now, phf=phd/fd, pfa=x.total/fd, dmh=phd*x.dm/100;
+    const phd=x.total/now, pfa=x.total/fd, dmh=phd*x.dm/100;
     totalDay+=x.total; dmSum+=dmh;
-    html+=`<div class="ing ${x.fixed?'fix':''}">
-      <div class="top"><span class="nm">${x.jp}</span>
-        <span class="dm">%DM ${V(i,'dm',num(x.dm))}</span></div>
-      <div class="qrow">
-        <span class="kv"><span class="k">総量/日</span> ${V(i,'total',num(Math.round(x.total*1000)/1000))}<span class="k">kg</span></span>
-        <span class="kv"><span class="k">1回</span> ${V(i,'feed',kg(pfa))}<span class="k">kg</span></span>
-      </div>
-      <div class="qrow">
-        <span class="kv"><span class="k">1頭/日</span> ${V(i,'phday',kg(phd),'ph')}<span class="k">kg</span></span>
-        <span class="kv"><span class="k">1頭/回</span> ${V(i,'phfeed',kg(phf))}<span class="k">kg</span></span>
-        <span class="kv"><span class="k">乾物</span> <span class="ro">${kg(dmh)}</span><span class="k">kg</span></span>
-      </div></div>`;
+    const E=(col,val,cls)=>`<td class="ed ${cls||''}" contenteditable data-i="${i}" data-col="${col}" onkeydown="cellKey(event,this)" onblur="commitCell(this)">${val}</td>`;
+    html+=`<tr class="${x.fixed?'fix':''}">
+      <td class="nm">${dispName(x.jp)}</td>
+      ${E('total',num(Math.round(x.total*1000)/1000))}
+      ${E('feed',kg(pfa))}
+      ${E('phday',kg(phd),'ph')}
+      <td class="ro">${kg(dmh)}</td></tr>`;
   });
-  document.getElementById('ingList').innerHTML=html;
+  document.getElementById('ingBody').innerHTML=html;
   document.getElementById('o_dmi').textContent=num(Math.round(dmSum*10)/10);
   document.getElementById('o_dmi2').textContent=num(Math.round(dmSum*100)/100);
   document.getElementById('o_totalday').textContent=num(Math.round(totalDay*10)/10)+' kg';
   document.getElementById('o_totalfeed').textContent=num(Math.round(totalDay/fd*10)/10)+' kg';
 }
 
-// ===== 読み込み（PDF / 画像OCR） =====
+// ===== 読み込み（PDF / 画像OCR / ドロップ） =====
 function setStatus(msg,cls){const e=document.getElementById('loadStatus');e.textContent=msg;e.className='status'+(cls?' '+cls:'');}
 function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('読み込み失敗'));document.head.appendChild(s);});}
 async function ensurePdfjs(){ if(window.pdfjsLib)return;
@@ -286,7 +286,7 @@ async function parsePDF(buf){
 function parseOCR(text){ return buildDesign(text, ()=>text.split(/\n/)); }
 
 function applyDesign(d){
-  if(!d.items||!d.items.length) throw new Error('原料を読み取れませんでした（写真は明るく正面から／PDF推奨）');
+  if(!d.items||!d.items.length) throw new Error('原料を読み取れませんでした（PDF推奨）');
   snapshot('読み込みで上書き');
   ITEMS=d.items; now=d.head;
   sv('i_feed', String(d.feed));
@@ -295,24 +295,39 @@ function applyDesign(d){
   document.getElementById('nowLabel').textContent=now;
   save(); render();
 }
+async function handlePDF(buf){
+  setStatus('PDF解析中…'); await ensurePdfjs();
+  const d=await parsePDF(buf); applyDesign(d);
+  setStatus(`✓ 読込：${d.date||'設計日不明'} ／ ${d.head}頭 ／ ${d.items.length}原料`,'ok');
+}
 document.getElementById('pdfInput').addEventListener('change', async e=>{
   const f=e.target.files[0]; e.target.value=''; if(!f) return;
-  try{ setStatus('PDF解析中…'); await ensurePdfjs();
-    const d=await parsePDF(await f.arrayBuffer()); applyDesign(d);
-    setStatus(`✓ 読込：${d.date||'設計日不明'} ／ ${d.head}頭 ／ ${d.items.length}原料`,'ok');
-  }catch(err){ setStatus('✗ '+err.message,'err'); }
+  try{ await handlePDF(await f.arrayBuffer()); }catch(err){ setStatus('✗ '+err.message,'err'); }
 });
 document.getElementById('imgInput').addEventListener('change', async e=>{
   const f=e.target.files[0]; e.target.value=''; if(!f) return;
   try{ setStatus('画像を解析中…（数十秒かかることがあります）'); await ensureTesseract();
     const w=await Tesseract.createWorker('eng');
-    await w.setParameters({tessedit_pageseg_mode:'4'});  // 行をまとめて読む
+    await w.setParameters({tessedit_pageseg_mode:'4'});
     const {data:{text}}=await w.recognize(f); await w.terminate();
     const d=parseOCR(text);
     if(d.items.length<5) throw new Error('原料表を十分に読み取れませんでした');
     applyDesign(d);
     setStatus(`✓ 画像読込：${d.date||'設計日不明'} ／ ${d.head}頭 ／ ${d.items.length}原料`,'ok');
   }catch(err){ setStatus('✗ 画像からは読み取りにくいです（'+err.message+'）。明るく正面から再撮影するか、PDF読込を推奨します。','err'); }
+});
+// ドラッグ&ドロップ（PCでPDF/画像）
+window.addEventListener('dragover',e=>{e.preventDefault();document.body.classList.add('drag');});
+window.addEventListener('dragleave',e=>{if(e.relatedTarget===null)document.body.classList.remove('drag');});
+window.addEventListener('drop', async e=>{
+  e.preventDefault(); document.body.classList.remove('drag');
+  const f=e.dataTransfer.files&&e.dataTransfer.files[0]; if(!f) return;
+  try{
+    if(/pdf$/i.test(f.name)||f.type==='application/pdf'){ await handlePDF(await f.arrayBuffer()); }
+    else if(/^image\//.test(f.type)){ document.getElementById('imgInput').files=e.dataTransfer.files;
+      document.getElementById('imgInput').dispatchEvent(new Event('change')); }
+    else setStatus('PDFまたは画像をドロップしてください','err');
+  }catch(err){ setStatus('✗ '+err.message,'err'); }
 });
 
 ['i_group','i_date','i_feed'].forEach(id=>
