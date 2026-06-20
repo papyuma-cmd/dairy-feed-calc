@@ -31,7 +31,16 @@
   .f{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:8px;padding:6px 10px;flex:1 1 150px;background:#fff}
   .f label{font-size:12px;color:var(--muted);white-space:nowrap}
   .f input{border:none;outline:none;font-size:15px;width:100%;min-width:50px;background:transparent}
+  .datef{position:relative;cursor:pointer}
+  .datef .dateval{font-size:15px;font-weight:700;white-space:nowrap}
+  .datef .dateval.empty{color:var(--muted);font-weight:400}
+  .datef input[type=date]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
   .f .dmi{font-weight:800;color:#9a6b00;white-space:nowrap}
+  .seg{display:flex}
+  .seg button{font-size:15px;font-weight:700;min-width:38px;padding:5px 0;border:1px solid var(--line);background:#fff;cursor:pointer}
+  .seg button+button{border-left:none}
+  .seg button:first-child{border-radius:7px 0 0 7px} .seg button:last-child{border-radius:0 7px 7px 0}
+  .seg button.on{background:var(--accent2);color:#fff;border-color:var(--accent2)}
   .heads{display:flex;align-items:center;gap:10px}
   .heads .lab{font-size:12px;color:var(--muted)}
   .heads .big{font-size:32px;font-weight:800;color:var(--accent);min-width:70px;text-align:center}
@@ -45,7 +54,7 @@
   .rt td.nm{text-align:left;font-size:12px;font-weight:700;line-height:1.12;
             border-left:4px solid var(--var);padding-left:7px;word-break:break-all}
   .rt tr.fix td.nm{border-left-color:var(--fix)}
-  .rt td.ed{color:var(--accent2);cursor:pointer;position:relative}
+  .rt td.ed{color:var(--accent2);cursor:pointer}
   .rt td.ed:active{background:#eef4ff}
   .rt td.ph{color:var(--accent)}
   .rt td.ro{color:#555;font-weight:600}
@@ -56,14 +65,15 @@
   #histList table{width:100%;border-collapse:collapse;font-size:12px}
   #histList td,#histList th{border:1px solid var(--line);padding:4px 6px;text-align:left}
   details summary{cursor:pointer;font-size:13px;color:var(--accent2);font-weight:700}
-  /* 数値テンキー */
   .padwrap{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:50}
   .padwrap.on{display:flex}
   .padbox{background:#fff;width:100%;max-width:430px;border-radius:18px 18px 0 0;padding:14px 14px calc(14px + env(safe-area-inset-bottom))}
   @media(min-width:480px){.padwrap{align-items:center}.padbox{border-radius:18px}}
-  .padhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .padhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
   .padhead .t{font-weight:700;color:var(--accent2);font-size:14px}
   .padhead .x{border:none;background:none;font-size:22px;cursor:pointer;color:var(--muted)}
+  .padcur{font-size:13px;color:var(--muted);margin-bottom:6px}
+  .padcur b{color:var(--ink);font-size:16px}
   .paddisp{font-size:36px;font-weight:800;text-align:right;padding:10px 16px;background:#f4f6f8;
            border-radius:12px;margin-bottom:10px;min-height:60px;word-break:break-all}
   .paddisp .u{font-size:16px;color:var(--muted);margin-left:6px}
@@ -96,9 +106,9 @@
   <div class="card">
     <div class="info">
       <div class="f"><label>群</label><input id="i_group" placeholder="搾乳群"></div>
-      <div class="f"><label>設計日</label><input id="i_date" placeholder="—"></div>
+      <div class="f datef"><label>設計日</label><span class="dateval empty" id="dateDisplay">日付を選択</span><input id="i_date" type="date" aria-label="設計日"></div>
       <div class="f"><label>DMI</label><span class="dmi"><span id="o_dmi">—</span> kg</span></div>
-      <div class="f"><label>給与回数</label><input id="i_feed" type="number" value="2" min="1"></div>
+      <div class="f"><label>給与回数</label><span class="seg" id="feedSeg"></span><input type="hidden" id="i_feed" value="2"></div>
     </div>
   </div>
 
@@ -137,10 +147,10 @@
 
 </div>
 
-<!-- 数値テンキー ポップアップ -->
 <div class="padwrap" id="pad" onclick="if(event.target===this)closePad()">
   <div class="padbox">
     <div class="padhead"><span class="t" id="padTitle"></span><button class="x" onclick="closePad()">✕</button></div>
+    <div class="padcur">現在 <b id="padOrig">—</b> kg</div>
     <div class="paddisp"><span id="padDisp">0</span><span class="u">kg</span></div>
     <div class="padgrid">
       <button onclick="padKey('7')">7</button><button onclick="padKey('8')">8</button><button onclick="padKey('9')">9</button>
@@ -204,13 +214,25 @@ function mapName(en){
 const KEY='nds-feed-tool-v4', HKEY='nds-feed-history-v1';
 function gv(id){return document.getElementById(id).value;}
 function sv(id,v){document.getElementById(id).value=v;}
+function formatDate(v){
+  const m=(v||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m?`${m[1]}年${parseInt(m[2],10)}月${parseInt(m[3],10)}日`:'日付を選択';
+}
+function renderDate(){
+  const v=gv('i_date'), el=document.getElementById('dateDisplay');
+  el.textContent=formatDate(v); el.classList.toggle('empty',!v);
+}
+function setDate(v){
+  document.getElementById('i_date').value=(v||'').replace(/\//g,'-');
+  renderDate();
+}
 function save(){try{localStorage.setItem(KEY,JSON.stringify({
   items:ITEMS,now,group:gv('i_group'),date:gv('i_date'),feed:gv('i_feed')
 }));}catch(e){}}
 function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(!s)return;
   if(Array.isArray(s.items)&&s.items.length)ITEMS=s.items.map(x=>({...x}));
   if(s.now)now=s.now;
-  if(s.group!=null)sv('i_group',s.group); if(s.date!=null)sv('i_date',s.date);
+  if(s.group!=null)sv('i_group',s.group); if(s.date!=null)setDate(s.date);
   if(s.feed!=null)sv('i_feed',s.feed);
 }catch(e){}}
 
@@ -232,22 +254,28 @@ function renderHist(){
   if(!h.length){el.innerHTML='履歴はまだありません。';return;}
   el.innerHTML='<table><tr><th>変更日</th><th>設計日</th><th>頭数</th><th></th></tr>'+
     h.map((s,i)=>`<tr><td>${s.archivedAt}<br><span style="color:#99a">${s.reason||''}</span></td>
-      <td>${s.designDate||'-'}</td><td>${s.now}頭</td>
+      <td>${(s.designDate||'-').replace(/-/g,'/')}</td><td>${s.now}頭</td>
       <td style="white-space:nowrap"><button class="minibtn" onclick="restoreHist(${i})">戻す</button>
       <button class="minibtn" style="color:#c0392b" onclick="delHist(${i})">削除</button></td></tr>`).join('')+'</table>';
 }
 function restoreHist(i){const h=loadHist(),s=h[i];if(!s)return;
   snapshot('復元前の自動保存');
   ITEMS=s.items.map(x=>({...x})); now=s.now;
-  sv('i_group',s.group||''); sv('i_date',s.designDate||''); sv('i_feed',s.feed||'2');
+  sv('i_group',s.group||''); setDate(s.designDate||''); sv('i_feed',s.feed||'2');
   document.getElementById('nowLabel').textContent=now; save(); render();
-  setStatus('履歴を復元しました（設計日 '+(s.designDate||'-')+'）','ok');}
+  setStatus('履歴を復元しました（設計日 '+((s.designDate||'-').replace(/-/g,'/'))+'）','ok');}
 function delHist(i){const h=loadHist();h.splice(i,1);saveHist(h);renderHist();}
 
 const feed=()=>Math.max(1,parseFloat(gv('i_feed'))||2);
 const num=n=>n.toLocaleString('ja-JP');
 const kg=n=>num(Math.round(n*1000)/1000);
 function bump(d){now=Math.max(1,now+d);document.getElementById('nowLabel').textContent=now;save();render();}
+function setFeed(n){sv('i_feed',String(n));save();render();}
+function renderFeedSeg(){
+  const cur=feed();
+  document.getElementById('feedSeg').innerHTML=[1,2,3].map(n=>
+    `<button class="${n===cur?'on':''}" onclick="setFeed(${n})">${n}</button>`).join('');
+}
 
 function commitValue(i,col,v){
   const fd=feed(), x=ITEMS[i];
@@ -276,6 +304,7 @@ function render(){
   document.getElementById('o_dmi2').textContent=num(Math.round(dmSum*100)/100);
   document.getElementById('o_totalday').textContent=num(Math.round(totalDay*10)/10)+' kg';
   document.getElementById('o_totalfeed').textContent=num(Math.round(totalDay/fd*10)/10)+' kg';
+  renderFeedSeg();
 }
 
 // ===== 数値テンキー =====
@@ -283,8 +312,9 @@ let padCtx=null, padReplace=true;
 function openPad(td){
   padCtx={i:+td.dataset.i, col:td.dataset.col};
   const cur=(td.textContent||'').replace(/[^\d.]/g,'')||'0';
-  document.getElementById('padDisp').textContent=cur;   // 現在値を表示
-  padReplace=true;                                       // 最初のキーで上書き
+  document.getElementById('padOrig').textContent=num(parseFloat(cur));  // 上部に現在値を常時表示
+  document.getElementById('padDisp').textContent=cur;
+  padReplace=true;
   document.getElementById('padTitle').textContent=`${ITEMS[padCtx.i].jp} ／ ${COLLAB[padCtx.col]}`;
   document.getElementById('pad').classList.add('on');
 }
@@ -302,7 +332,6 @@ function padOK(){
     if(!isNaN(v)) commitValue(padCtx.i,padCtx.col,v); }
   closePad();
 }
-// PCの物理キーボードでも操作可
 document.addEventListener('keydown',e=>{
   if(!document.getElementById('pad').classList.contains('on'))return;
   if(/^[0-9]$/.test(e.key)){padKey(e.key);e.preventDefault();}
@@ -312,7 +341,7 @@ document.addEventListener('keydown',e=>{
   else if(e.key==='Escape'){closePad();e.preventDefault();}
 });
 
-// ===== 読み込み（PDF / 画像OCR / ドロップ） =====
+// ===== 読み込み =====
 function setStatus(msg,cls){const e=document.getElementById('loadStatus');e.textContent=msg;e.className='status'+(cls?' '+cls:'');}
 function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('読み込み失敗'));document.head.appendChild(s);});}
 async function ensurePdfjs(){ if(window.pdfjsLib)return;
@@ -325,7 +354,7 @@ function buildDesign(full, lineGetter){
   const mN=full.match(/n\s*=\s*(\d+)/i), mD=full.match(/(\d{8})/), mDmi=full.match(/([\d.]+)\s*DMI/i),
         mF=full.match(/feedings[:\s]*(\d+)/i), mFarm=full.match(/([A-Za-z][A-Za-z0-9'’.\-]*\s+Farm)\b/);
   const head=mN?parseInt(mN[1]):120;
-  const date=mD?`${mD[1].slice(0,4)}/${mD[1].slice(4,6)}/${mD[1].slice(6,8)}`:'';
+  const date=mD?`${mD[1].slice(0,4)}-${mD[1].slice(4,6)}-${mD[1].slice(6,8)}`:'';
   const fd=mF?parseInt(mF[1]):2;
   const out=[];
   lineGetter().forEach(line=>{
@@ -357,7 +386,7 @@ function applyDesign(d){
   snapshot('読み込みで上書き');
   ITEMS=d.items; now=d.head;
   sv('i_feed', String(d.feed));
-  if(d.date) sv('i_date', d.date);
+  if(d.date) setDate(d.date);
   if(d.group) sv('i_group', d.group);
   document.getElementById('nowLabel').textContent=now;
   save(); render();
@@ -365,7 +394,7 @@ function applyDesign(d){
 async function handlePDF(buf){
   setStatus('PDF解析中…'); await ensurePdfjs();
   const d=await parsePDF(buf); applyDesign(d);
-  setStatus(`✓ 読込：${d.date||'設計日不明'} ／ ${d.head}頭 ／ ${d.items.length}原料`,'ok');
+  setStatus(`✓ 読込：${(d.date||'設計日不明').replace(/-/g,'/')} ／ ${d.head}頭 ／ ${d.items.length}原料`,'ok');
 }
 document.getElementById('pdfInput').addEventListener('change', async e=>{
   const f=e.target.files[0]; e.target.value=''; if(!f) return;
@@ -380,7 +409,7 @@ document.getElementById('imgInput').addEventListener('change', async e=>{
     const d=parseOCR(text);
     if(d.items.length<5) throw new Error('原料表を十分に読み取れませんでした');
     applyDesign(d);
-    setStatus(`✓ 画像読込：${d.date||'設計日不明'} ／ ${d.head}頭 ／ ${d.items.length}原料`,'ok');
+    setStatus(`✓ 画像読込：${(d.date||'設計日不明').replace(/-/g,'/')} ／ ${d.head}頭 ／ ${d.items.length}原料`,'ok');
   }catch(err){ setStatus('✗ 画像からは読み取りにくいです（'+err.message+'）。明るく正面から再撮影するか、PDF読込を推奨します。','err'); }
 });
 window.addEventListener('dragover',e=>{e.preventDefault();document.body.classList.add('drag');});
@@ -396,9 +425,10 @@ window.addEventListener('drop', async e=>{
   }catch(err){ setStatus('✗ '+err.message,'err'); }
 });
 
-['i_group','i_date','i_feed'].forEach(id=>
-  document.getElementById(id).addEventListener('input',()=>{save();render();}));
+document.getElementById('i_group').addEventListener('input',()=>{save();});
+document.getElementById('i_date').addEventListener('change',()=>{renderDate();save();});
 load();
+renderDate();
 document.getElementById('nowLabel').textContent=now;
 render(); renderHist();
 </script>
