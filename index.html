@@ -57,6 +57,9 @@
   .rt td.nm{text-align:left;font-size:12px;font-weight:700;line-height:1.12;
             border-left:4px solid var(--var);padding-left:7px;word-break:break-all}
   .rt tr.fix td.nm{border-left-color:var(--fix)}
+  .rt td.nm .dmtap{display:inline-block;margin-top:2px;font-size:10.5px;font-weight:700;white-space:nowrap;
+                   color:var(--accent2);background:#eef4ff;border:1px solid #d4e2f7;border-radius:5px;padding:0 5px;cursor:pointer}
+  .rt td.nm .dmtap:active{background:#dbe8fb}
   .rt td.ed{color:var(--accent2);cursor:pointer}
   .rt td.ed:active{background:#eef4ff}
   .rt td.ph{color:var(--accent)}
@@ -146,7 +149,7 @@
       <span>1回 <span id="o_totalfeed">—</span></span>
       <span>乾物(DMI) <span id="o_dmi2">—</span> kg</span>
     </div>
-    <div class="note">総量・1回・1頭/日の数字をタップ → テンキーで入力 → 決定。1回を入れると 総量＝1回×給与回数。</div>
+    <div class="note">総量・1回・1頭/日・「DM○%」をタップ → テンキーで入力 → 決定。1回を入れると 総量＝1回×給与回数。乾物摂取量＝乾物率×1頭1日量。</div>
   </div>
 
 </div>
@@ -162,8 +165,8 @@
 <div class="padwrap" id="pad" onclick="if(event.target===this)closePad()">
   <div class="padbox">
     <div class="padhead"><span class="t" id="padTitle"></span><button class="x" onclick="closePad()">✕</button></div>
-    <div class="padcur">現在 <b id="padOrig">—</b> kg</div>
-    <div class="paddisp"><span id="padDisp">0</span><span class="u">kg</span></div>
+    <div class="padcur">現在 <b id="padOrig">—</b> <span id="padUnit2">kg</span></div>
+    <div class="paddisp"><span id="padDisp">0</span><span class="u" id="padUnit">kg</span></div>
     <div class="padgrid">
       <button onclick="padKey('7')">7</button><button onclick="padKey('8')">8</button><button onclick="padKey('9')">9</button>
       <button onclick="padKey('4')">4</button><button onclick="padKey('5')">5</button><button onclick="padKey('6')">6</button>
@@ -184,12 +187,13 @@ const DESIGN = [
   {jp:"配合",          total:480,  dm:88,   fixed:false},
   {jp:"大豆粕",        total:60,   dm:90,   fixed:false},
   {jp:"DDGs",         total:480,  dm:89,   fixed:false},
-  {jp:"1番サイレージ",  total:3000, dm:21,   fixed:false},
+  {jp:"GS1",          total:3000, dm:21,   fixed:false},
   {jp:"油脂",          total:48,   dm:99.5, fixed:true},
   {jp:"プレミックス",   total:12,   dm:99.5, fixed:true},
   {jp:"酸化マグ",      total:6,    dm:99.5, fixed:true},
   {jp:"炭カル",        total:48,   dm:99.5, fixed:true},
   {jp:"重曹",          total:24,   dm:99.5, fixed:true},
+  {jp:"粉砕塩",        total:6,    dm:99.5, fixed:true},
   {jp:"オーツ",        total:600,  dm:90,   fixed:true},
   {jp:"加水",          total:1560, dm:0.05, fixed:true},
 ];
@@ -198,9 +202,9 @@ let ITEMS = DESIGN.map(x=>({...x}));
 let now=120;
 
 const DISP={'圧ペンコーン':'圧ペン<br>コーン','マッシュコーン':'マッシュ<br>コーン',
-  '1番サイレージ':'1番<br>サイレージ','2番サイレージ':'2番<br>サイレージ','プレミックス':'ミックス'};
+  'プレミックス':'ミックス'};
 function dispName(jp){return DISP[jp]||jp;}
-const COLLAB={total:'総量/日',feed:'1回量',phday:'1頭/日'};
+const COLLAB={total:'総量/日',feed:'1回量',phday:'1頭/日',dm:'乾物率(%DM)'};
 
 const NDS_MAP = [
   ["Nakanome Lactation Mix Omnigen","プレミックス",true],
@@ -208,6 +212,7 @@ const NDS_MAP = [
   ["Oat Hay","オーツ",true],
   ["Soybean Meal","大豆粕",false],
   ["Sodium Bicarbonate","重曹",true],
+  ["Salt White","粉砕塩",true],
   ["Calcium Carbonate","炭カル",true],
   ["Magnesium Ox","酸化マグ",true],
   ["Palmit","油脂",true],
@@ -217,8 +222,8 @@ const NDS_MAP = [
   ["Water","加水",true],
 ];
 function mapName(en){
-  if(/^J\s*GS2/i.test(en)) return {jp:"2番サイレージ",fixed:true};
-  if(/^J\s*GS1/i.test(en)) return {jp:"1番サイレージ",fixed:false};
+  if(/^J\s*GS2/i.test(en)) return {jp:"GS2",fixed:true};
+  if(/^J\s*GS1/i.test(en)) return {jp:"GS1",fixed:false};
   for(const [k,jp,fx] of NDS_MAP){ if(en.toLowerCase().startsWith(k.toLowerCase())) return {jp,fixed:fx}; }
   return null;
 }
@@ -293,7 +298,8 @@ function renderFeedSeg(){
 
 function commitValue(i,col,v){
   const fd=feed(), x=ITEMS[i];
-  if(col==='total') x.total=v;
+  if(col==='dm') x.dm=v;                 // 乾物率(%DM)手入力 → 乾物摂取量に反映
+  else if(col==='total') x.total=v;
   else if(col==='feed')  x.total=v*fd;
   else if(col==='phday') x.total=v*now;
   save(); render();
@@ -307,7 +313,7 @@ function render(){
     totalDay+=x.total; dmSum+=dmh;
     const E=(col,val,cls)=>`<td class="ed ${cls||''}" data-i="${i}" data-col="${col}" onclick="openPad(this)">${val}</td>`;
     html+=`<tr class="${x.fixed?'fix':''}">
-      <td class="nm">${dispName(x.jp)}</td>
+      <td class="nm">${dispName(x.jp)}<br><span class="dmtap" data-i="${i}" data-col="dm" onclick="openPad(this)">DM ${num(x.dm)}%</span></td>
       ${E('total',num(Math.round(x.total*1000)/1000))}
       ${E('feed',kg(pfa))}
       ${E('phday',kg(phd),'ph')}
@@ -329,6 +335,9 @@ function openPad(td){
   document.getElementById('padOrig').textContent=num(parseFloat(cur));  // 上部に現在値を常時表示
   document.getElementById('padDisp').textContent=cur;
   padReplace=true;
+  const unit=padCtx.col==='dm'?'%':'kg';
+  document.getElementById('padUnit').textContent=unit;
+  document.getElementById('padUnit2').textContent=unit;
   document.getElementById('padTitle').textContent=`${ITEMS[padCtx.i].jp} ／ ${COLLAB[padCtx.col]}`;
   document.getElementById('pad').classList.add('on');
 }
