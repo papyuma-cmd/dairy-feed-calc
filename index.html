@@ -63,6 +63,7 @@
   .rt td.ed{color:var(--accent2);cursor:pointer}
   .rt td.ed:active{background:#eef4ff}
   .rt td.ph{color:var(--accent)}
+  .rt td .cum{font-size:10.5px;font-weight:600;color:var(--muted);margin-top:1px}
   .rt td.ro{color:#555;font-weight:600}
   .sum{display:flex;justify-content:space-between;gap:8px;background:#1b2733;color:#fff;
        border-radius:9px;padding:9px 12px;margin-top:8px;font-size:12.5px;font-weight:700;flex-wrap:wrap}
@@ -140,7 +141,7 @@
     <table class="rt">
       <colgroup><col class="cn"><col class="cq"><col class="cq"><col class="cq"><col class="cq"></colgroup>
       <thead><tr>
-        <th>原料</th><th>総量/日<br>kg</th><th>1回<br>kg</th><th>1頭/日<br>kg</th><th>乾物<br>kg</th>
+        <th>原料</th><th>総量/日<br>kg</th><th>1回<br>kg（累積）</th><th>1頭/日<br>kg</th><th>乾物<br>kg</th>
       </tr></thead>
       <tbody id="ingBody"></tbody>
     </table>
@@ -307,16 +308,16 @@ function commitValue(i,col,v){
 
 function render(){
   const fd=feed();
-  let totalDay=0,dmSum=0,html='';
+  let totalDay=0,dmSum=0,cum=0,html='';
   ITEMS.forEach((x,i)=>{
     const phd=x.total/now, pfa=x.total/fd, dmh=phd*x.dm/100;
-    totalDay+=x.total; dmSum+=dmh;
-    const E=(col,val,cls)=>`<td class="ed ${cls||''}" data-i="${i}" data-col="${col}" onclick="openPad(this)">${val}</td>`;
+    totalDay+=x.total; dmSum+=dmh; cum+=pfa;   // 累積＝1回量を上から積み上げ
+    const E=(col,raw,disp,cls,extra)=>`<td class="ed ${cls||''}" data-i="${i}" data-col="${col}" data-val="${raw}" onclick="openPad(this)">${disp}${extra||''}</td>`;
     html+=`<tr class="${x.fixed?'fix':''}">
-      <td class="nm">${dispName(x.jp)}<br><span class="dmtap" data-i="${i}" data-col="dm" onclick="openPad(this)">DM ${num(x.dm)}%</span></td>
-      ${E('total',num(Math.round(x.total*1000)/1000))}
-      ${E('feed',kg(pfa))}
-      ${E('phday',kg(phd),'ph')}
+      <td class="nm">${dispName(x.jp)}<br><span class="dmtap" data-i="${i}" data-col="dm" data-val="${x.dm}" onclick="openPad(this)">DM ${num(x.dm)}%</span></td>
+      ${E('total',Math.round(x.total*1000)/1000,num(Math.round(x.total*1000)/1000))}
+      ${E('feed',Math.round(pfa*1000)/1000,kg(pfa),null,`<div class="cum">(${kg(cum)})</div>`)}
+      ${E('phday',Math.round(phd*1000)/1000,kg(phd),'ph')}
       <td class="ro">${kg(dmh)}</td></tr>`;
   });
   document.getElementById('ingBody').innerHTML=html;
@@ -331,7 +332,7 @@ function render(){
 let padCtx=null, padReplace=true;
 function openPad(td){
   padCtx={i:+td.dataset.i, col:td.dataset.col};
-  const cur=(td.textContent||'').replace(/[^\d.]/g,'')||'0';
+  const cur=(td.dataset.val!=null&&td.dataset.val!=='')?td.dataset.val:((td.textContent||'').replace(/[^\d.]/g,'')||'0');
   document.getElementById('padOrig').textContent=num(parseFloat(cur));  // 上部に現在値を常時表示
   document.getElementById('padDisp').textContent=cur;
   padReplace=true;
