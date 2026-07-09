@@ -179,9 +179,10 @@
 
 <div class="histwrap" id="dpModal" onclick="if(event.target===this)closeDp()">
   <div class="histbox">
-    <div class="histhead"><h2>1頭/日 の表示桁数</h2><button class="x" onclick="closeDp()">✕</button></div>
-    <div class="note" style="margin:0 0 8px">原料ごとに小数点以下の桁数（0〜3）を設定します。</div>
+    <div class="histhead"><h2>1回量 の表示桁数</h2><button class="x" onclick="closeDp()">✕</button></div>
+    <div class="note" style="margin:0 0 8px">1回のミキサー投入量について、原料ごとに小数点以下の桁数（0〜3）を設定します。（1頭/日は自動：1kg未満=2桁、1kg以上=1桁）</div>
     <div id="dpList"></div>
+    <button class="bigbtn" style="margin-top:14px;width:100%" onclick="closeDp()">完了</button>
   </div>
 </div>
 
@@ -321,11 +322,13 @@ function delHist(i){const h=loadHist();h.splice(i,1);saveHist(h);renderHist();}
 const feed=()=>Math.max(1,parseFloat(gv('i_feed'))||2);
 const num=n=>n.toLocaleString('ja-JP');
 const kg=n=>num(Math.round(n*1000)/1000);
-// 1頭/日 の表示桁数（原料ごと）。既定：添加物など少量は1桁、それ以外は整数
+// 1回量 の表示桁数（原料ごと）。既定：添加物など少量は1桁、それ以外は整数
 const DP1=['油脂','プレミックス','酸化マグ','炭カル','重曹','粉砕塩','塩'];
 function defaultDp(jp){return DP1.includes(jp)?1:0;}
 function fmtDp(v,dp){dp=dp||0;const f=Math.pow(10,dp);
   return (Math.round(v*f)/f).toLocaleString('ja-JP',{minimumFractionDigits:dp,maximumFractionDigits:dp});}
+// 1頭/日 は固定ルール：1kg未満=小数2桁、1kg以上=小数1桁
+function fmtPh(v){return v<1 ? fmtDp(v,2) : fmtDp(v,1);}
 function bump(d){
   const old=now; now=Math.max(1,now+d);
   if(mode==='perhead' && old>0){ const r=now/old; ITEMS.forEach(x=>{x.total=Math.round(x.total*r*1000)/1000;}); }
@@ -368,8 +371,8 @@ function render(){
     html+=`<tr class="${x.fixed?'fix':''}">
       <td class="nm">${dispName(x.jp)}<br><span class="dmtap" data-i="${i}" data-col="dm" data-val="${x.dm}" onclick="openPad(this)">DM ${num(x.dm)}%</span></td>
       ${E('total',Math.round(x.total*1000)/1000,num(Math.round(x.total*1000)/1000),'sm')}
-      ${E('feed',Math.round(pfa*1000)/1000,kg(pfa),null,`<span class="cum">(${kg(cum)})</span>`)}
-      ${E('phday',Math.round(phd*1000)/1000,fmtDp(phd,x.dp),'ph')}
+      ${E('feed',Math.round(pfa*1000)/1000,fmtDp(pfa,x.dp),null,`<span class="cum">(${kg(cum)})</span>`)}
+      ${E('phday',Math.round(phd*1000)/1000,fmtPh(phd),'ph')}
       <td class="ro sm">${kg(dmh)}</td></tr>`;
   });
   document.getElementById('ingBody').innerHTML=html;
