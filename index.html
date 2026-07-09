@@ -371,7 +371,7 @@ function render(){
     html+=`<tr class="${x.fixed?'fix':''}">
       <td class="nm">${dispName(x.jp)}<br><span class="dmtap" data-i="${i}" data-col="dm" data-val="${x.dm}" onclick="openPad(this)">DM ${num(x.dm)}%</span></td>
       ${E('total',Math.round(x.total*1000)/1000,num(Math.round(x.total*1000)/1000),'sm')}
-      ${E('feed',Math.round(pfa*1000)/1000,fmtDp(pfa,x.dp),null,`<span class="cum">(${fmtDp(cum,x.dp)})</span>`)}
+      ${E('feed',Math.round(pfa*1000)/1000,fmtDp(pfa,x.dp),null,`<span class="cum">(${fmtDp(cum,0)})</span>`)}
       ${E('phday',Math.round(phd*1000)/1000,fmtPh(phd),'ph')}
       <td class="ro sm">${kg(dmh)}</td></tr>`;
   });
