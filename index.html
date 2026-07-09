@@ -49,6 +49,8 @@
   .heads .big{font-size:32px;font-weight:800;color:var(--accent);min-width:70px;text-align:center}
   .stepbtn{font-size:22px;width:46px;height:46px;border:1px solid var(--line);background:#fff;border-radius:9px;cursor:pointer}
   .stepbtn:active{background:#eef2f6}
+  .moderow{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .seg.modeseg button{padding:6px 11px;min-width:0;font-size:13px}
   .rt{width:100%;border-collapse:collapse;table-layout:fixed}
   .rt col.c1{width:19%} .rt col.c2{width:16%} .rt col.c3{width:31%} .rt col.c4{width:18%} .rt col.c5{width:16%}
   .rt td.sm{font-size:12px}
@@ -136,13 +138,18 @@
       <div class="big" id="nowLabel">120</div>
       <button class="stepbtn" onclick="bump(1)">＋</button>
     </div>
+    <div class="moderow">
+      <span class="lab">頭数を変えたら</span>
+      <span class="seg modeseg" id="modeSeg"></span>
+    </div>
+    <div class="note" id="modeNote"></div>
   </div>
 
   <div class="card">
     <table class="rt">
       <colgroup><col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"></colgroup>
       <thead><tr>
-        <th>原料</th><th>総量/日<br>kg</th><th>1回<br>kg（累積）</th><th>1頭/日<br>kg</th><th>乾物<br>kg</th>
+        <th>原料</th><th>総量/日<br>kg</th><th>1回（累積）<br>kg</th><th>1頭/日<br>kg</th><th>乾物<br>kg</th>
       </tr></thead>
       <tbody id="ingBody"></tbody>
     </table>
@@ -202,6 +209,7 @@ const DESIGN = [
 const DEFAULTS={group:"搾乳群",date:"",feed:"2",now:120};
 let ITEMS = DESIGN.map(x=>({...x}));
 let now=120;
+let mode='total';   // 'total'=総量固定 / 'perhead'=1頭あたり固定
 
 const DISP={'圧ペンコーン':'圧ペン<br>コーン','マッシュコーン':'マッシュ<br>コーン',
   'プレミックス':'ミックス'};
@@ -246,11 +254,12 @@ function setDate(v){
   renderDate();
 }
 function save(){try{localStorage.setItem(KEY,JSON.stringify({
-  items:ITEMS,now,group:gv('i_group'),date:gv('i_date'),feed:gv('i_feed')
+  items:ITEMS,now,mode,group:gv('i_group'),date:gv('i_date'),feed:gv('i_feed')
 }));}catch(e){}}
 function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(!s)return;
   if(Array.isArray(s.items)&&s.items.length)ITEMS=s.items.map(x=>({...x}));
   if(s.now)now=s.now;
+  if(s.mode)mode=s.mode;
   if(s.group!=null)sv('i_group',s.group); if(s.date!=null)setDate(s.date);
   if(s.feed!=null)sv('i_feed',s.feed);
 }catch(e){}}
@@ -290,7 +299,21 @@ function delHist(i){const h=loadHist();h.splice(i,1);saveHist(h);renderHist();}
 const feed=()=>Math.max(1,parseFloat(gv('i_feed'))||2);
 const num=n=>n.toLocaleString('ja-JP');
 const kg=n=>num(Math.round(n*1000)/1000);
-function bump(d){now=Math.max(1,now+d);document.getElementById('nowLabel').textContent=now;save();render();}
+function bump(d){
+  const old=now; now=Math.max(1,now+d);
+  if(mode==='perhead' && old>0){ const r=now/old; ITEMS.forEach(x=>{x.total=Math.round(x.total*r*1000)/1000;}); }
+  document.getElementById('nowLabel').textContent=now; save(); render();
+}
+function setMode(m){mode=m;save();render();}
+function renderModeSeg(){
+  const el=document.getElementById('modeSeg'); if(!el)return;
+  el.innerHTML=[['total','総量固定'],['perhead','1頭あたり固定']].map(([m,l])=>
+    `<button class="${m===mode?'on':''}" onclick="setMode('${m}')">${l}</button>`).join('');
+  const note=document.getElementById('modeNote');
+  if(note) note.textContent = mode==='total'
+    ? '総量/日を固定 → 頭数を変えると1頭あたり量が増減します。'
+    : '1頭あたり量を固定 → 頭数を変えると総量・1回投入量が増減します。';
+}
 function setFeed(n){sv('i_feed',String(n));save();render();}
 function renderFeedSeg(){
   const cur=feed();
@@ -326,7 +349,7 @@ function render(){
   document.getElementById('o_dmi2').textContent=num(Math.round(dmSum*100)/100);
   document.getElementById('o_totalday').textContent=num(Math.round(totalDay*10)/10)+' kg';
   document.getElementById('o_totalfeed').textContent=num(Math.round(totalDay/fd*10)/10)+' kg';
-  renderFeedSeg();
+  renderFeedSeg(); renderModeSeg();
 }
 
 // ===== 数値テンキー =====
