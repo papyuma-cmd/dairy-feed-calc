@@ -51,6 +51,9 @@
   .stepbtn:active{background:#eef2f6}
   .moderow{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
   .seg.modeseg button{padding:6px 11px;min-width:0;font-size:13px}
+  .dprow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 2px;border-bottom:1px solid #eef1f4}
+  .dprow .dpnm{font-weight:700;font-size:13px}
+  .seg.dpseg button{min-width:36px;padding:6px 0;font-size:14px}
   .rt{width:100%;border-collapse:collapse;table-layout:fixed}
   .rt col.c1{width:19%} .rt col.c2{width:16%} .rt col.c3{width:31%} .rt col.c4{width:18%} .rt col.c5{width:16%}
   .rt td.sm{font-size:12px}
@@ -146,6 +149,9 @@
   </div>
 
   <div class="card">
+    <div style="text-align:right;margin-bottom:6px">
+      <button class="minibtn" onclick="openDpSettings()">🔢 表示桁数の変更</button>
+    </div>
     <table class="rt">
       <colgroup><col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"></colgroup>
       <thead><tr>
@@ -168,6 +174,14 @@
     <div class="histhead"><h2>履歴</h2><button class="x" onclick="closeHistory()">✕</button></div>
     <button class="minibtn" onclick="snapshotNow()">現在を履歴に保存</button>
     <div id="histList" style="margin-top:12px;font-size:12px;color:var(--muted)">履歴はまだありません。</div>
+  </div>
+</div>
+
+<div class="histwrap" id="dpModal" onclick="if(event.target===this)closeDp()">
+  <div class="histbox">
+    <div class="histhead"><h2>1頭/日 の表示桁数</h2><button class="x" onclick="closeDp()">✕</button></div>
+    <div class="note" style="margin:0 0 8px">原料ごとに小数点以下の桁数（0〜3）を設定します。</div>
+    <div id="dpList"></div>
   </div>
 </div>
 
@@ -277,6 +291,14 @@ function snapshot(reason){
   saveHist(h); renderHist();
 }
 function snapshotNow(){snapshot('手動保存'); setStatus('履歴に保存しました','ok');}
+function openDpSettings(){renderDpList();document.getElementById('dpModal').classList.add('on');}
+function closeDp(){document.getElementById('dpModal').classList.remove('on');}
+function setDp(i,dp){ITEMS[i].dp=dp;save();render();renderDpList();}
+function renderDpList(){
+  document.getElementById('dpList').innerHTML=ITEMS.map((x,i)=>`
+    <div class="dprow"><span class="dpnm">${x.jp}</span>
+      <span class="seg dpseg">${[0,1,2,3].map(d=>`<button class="${(x.dp||0)===d?'on':''}" onclick="setDp(${i},${d})">${d}</button>`).join('')}</span></div>`).join('');
+}
 function openHistory(){renderHist();document.getElementById('history').classList.add('on');}
 function closeHistory(){document.getElementById('history').classList.remove('on');}
 function renderHist(){
@@ -299,6 +321,11 @@ function delHist(i){const h=loadHist();h.splice(i,1);saveHist(h);renderHist();}
 const feed=()=>Math.max(1,parseFloat(gv('i_feed'))||2);
 const num=n=>n.toLocaleString('ja-JP');
 const kg=n=>num(Math.round(n*1000)/1000);
+// 1頭/日 の表示桁数（原料ごと）。既定：添加物など少量は1桁、それ以外は整数
+const DP1=['油脂','プレミックス','酸化マグ','炭カル','重曹','粉砕塩','塩'];
+function defaultDp(jp){return DP1.includes(jp)?1:0;}
+function fmtDp(v,dp){dp=dp||0;const f=Math.pow(10,dp);
+  return (Math.round(v*f)/f).toLocaleString('ja-JP',{minimumFractionDigits:dp,maximumFractionDigits:dp});}
 function bump(d){
   const old=now; now=Math.max(1,now+d);
   if(mode==='perhead' && old>0){ const r=now/old; ITEMS.forEach(x=>{x.total=Math.round(x.total*r*1000)/1000;}); }
@@ -334,6 +361,7 @@ function render(){
   const fd=feed();
   let totalDay=0,dmSum=0,cum=0,html='';
   ITEMS.forEach((x,i)=>{
+    if(x.dp==null)x.dp=defaultDp(x.jp);
     const phd=x.total/now, pfa=x.total/fd, dmh=phd*x.dm/100;
     totalDay+=x.total; dmSum+=dmh; cum+=pfa;   // 累積＝1回量を上から積み上げ
     const E=(col,raw,disp,cls,extra)=>`<td class="ed ${cls||''}" data-i="${i}" data-col="${col}" data-val="${raw}" onclick="openPad(this)">${disp}${extra||''}</td>`;
@@ -341,7 +369,7 @@ function render(){
       <td class="nm">${dispName(x.jp)}<br><span class="dmtap" data-i="${i}" data-col="dm" data-val="${x.dm}" onclick="openPad(this)">DM ${num(x.dm)}%</span></td>
       ${E('total',Math.round(x.total*1000)/1000,num(Math.round(x.total*1000)/1000),'sm')}
       ${E('feed',Math.round(pfa*1000)/1000,kg(pfa),null,`<span class="cum">(${kg(cum)})</span>`)}
-      ${E('phday',Math.round(phd*1000)/1000,kg(phd),'ph')}
+      ${E('phday',Math.round(phd*1000)/1000,fmtDp(phd,x.dp),'ph')}
       <td class="ro sm">${kg(dmh)}</td></tr>`;
   });
   document.getElementById('ingBody').innerHTML=html;
